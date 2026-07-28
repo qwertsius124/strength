@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Трекер силовых</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Трекер">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --bg:#000000;
+  --card:#1c1c1e;
+  --card2:#242426;
+  --border:#2c2c2e;
+  --text:#f2f2f7;
+  --muted:#8e8e93;
+  --accent:#30d158;
+  --accent2:#0a84ff;
+  --danger:#ff453a;
+  --gold:#ffd60a;
+  --purple:#bf5af2;
+  --app-height:100dvh;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overscroll-behavior-y:none;
+  -webkit-font-smoothing:antialiased;
+  display:flex;
+  flex-direction:column;
+  min-height:var(--app-height);
+}
+button,input,textarea,select{font-family:inherit;}
+.page{
+  max-width:600px;
+  width:100%;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  flex:1;
+  min-height:var(--app-height);
+}
+.app{
+  flex:1 0 auto;
+  padding:max(16px,env(safe-area-inset-top)) 16px 24px;
+}
+.screen{display:none;animation:fadeIn .25s ease;}
+.screen.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+h1{font-size:26px;font-weight:800;margin:4px 0 2px;letter-spacing:-.02em;}
+.sub{color:var(--muted);font-size:14px;margin-bottom:18px;}
+h2{font-size:20px;font-weight:700;margin:0 0 12px;letter-spacing:-.01em;}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:14px;
+}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.stat-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+  min-width:0;
+}
+.stat-card .ico{font-size:20px;margin-bottom:6px;display:block;}
+.stat-card .big{font-size:22px;font-weight:800;letter-spacing:-.02em;}
+.stat-card .lbl{font-size:12.5px;color:var(--muted);margin:0 0 4px;}
+.stat-card .sub2{font-size:11.5px;color:var(--muted);margin-top:4px;}
+.stat-card.total{grid-column:1 / -1;background:linear-gradient(135deg,#1c1c1e,#26262a);}
+.stat-card.total .big{font-size:28px;color:var(--gold);}
+
+.seg{
+  display:flex;background:var(--card);border-radius:12px;padding:3px;margin-bottom:14px;border:1px solid var(--border);
+}
+.seg button{
+  flex:1;border:none;background:transparent;color:var(--muted);padding:8px 4px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;
+}
+.seg button.active{background:var(--accent2);color:#fff;}
+
+.chart-wrap{width:100%;height:150px;}
+.chart-wrap svg{width:100%;height:100%;display:block;}
+.chart-empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 0;}
+
+.tabbar{
+  position:sticky;left:0;right:0;bottom:0;
+  background:rgba(20,20,22,.85);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  display:flex;
+  padding:6px 2px max(6px, env(safe-area-inset-bottom));
+  z-index:40;
+  flex-shrink:0;
+}
+.tabbar .item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  color:var(--muted);background:none;border:none;font-size:10px;font-weight:600;cursor:pointer;padding:4px 0;
+}
+.tabbar .item.active{color:var(--accent2);}
+.tabbar .item .ic{font-size:19px;}
+
+.fab{
+  position:fixed;right:20px;bottom:calc(70px + env(safe-area-inset-bottom));
+  width:58px;height:58px;border-radius:50%;
+  background:var(--accent2);color:#fff;border:none;
+  font-size:28px;font-weight:400;
+  box-shadow:0 6px 18px rgba(10,132,255,.45);
+  display:flex;align-items:center;justify-content:center;
+  z-index:45;cursor:pointer;transition:transform .15s;
+}
+.fab:active{transform:scale(.92);}
+
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:90;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.overlay.open{opacity:1;pointer-events:auto;}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:91;
+  background:var(--card);border-radius:20px 20px 0 0;
+  padding:14px 18px calc(20px + env(safe-area-inset-bottom));
+  max-width:600px;margin:0 auto;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);
+  max-height:88vh;overflow-y:auto;
+}
+.sheet.open{transform:translateY(0);}
+.sheet-handle{width:36px;height:5px;background:var(--border);border-radius:3px;margin:0 auto 14px;}
+.sheet h3{font-size:18px;margin:0 0 4px;}
+.sheet .type-note{font-size:12.5px;color:var(--muted);margin-bottom:14px;}
+
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;}
+.field input,.field select,.field textarea{
+  width:100%;background:#111113;border:1px solid var(--border);border-radius:10px;color:var(--text);
+  padding:11px 12px;font-size:16px;-webkit-appearance:none;appearance:none;
+}
+.field textarea{resize:vertical;min-height:56px;font-family:inherit;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent2);}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.optional-toggle{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.optional-toggle input{width:20px;height:20px;flex-shrink:0;}
+.optional-toggle label{font-size:14px;color:var(--text);margin:0;}
+.optional-fields{display:none;border-top:1px solid var(--border);padding-top:10px;margin-top:2px;}
+.optional-fields.open{display:block;}
+.hidden{display:none !important;}
+
+.btn{
+  width:100%;padding:14px;border-radius:12px;border:none;font-weight:700;font-size:15.5px;cursor:pointer;transition:opacity .15s;
+}
+.btn:active{opacity:.8;}
+.btn-primary{background:var(--accent2);color:#fff;}
+.btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border);}
+
+.entry-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--border);
+}
+.entry-row:last-child{border-bottom:none;}
+.entry-main{font-size:15px;font-weight:600;}
+.entry-main .pr-badge{font-size:10.5px;background:var(--gold);color:#000;padding:1px 6px;border-radius:6px;margin-left:6px;font-weight:800;}
+.entry-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
+.entry-del{background:none;border:none;color:var(--danger);font-size:17px;padding:4px 8px;cursor:pointer;flex-shrink:0;}
+
+.searchbar{display:flex;gap:8px;margin-bottom:12px;}
+.searchbar input{flex:1;}
+.filter-row{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;}
+.chip{
+  flex-shrink:0;padding:7px 14px;border-radius:20px;background:var(--card);border:1px solid var(--border);
+  color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;
+}
+.chip.active{background:var(--accent2);color:#fff;border-color:var(--accent2);}
+
+.empty-state{text-align:center;color:var(--muted);font-size:13.5px;padding:40px 10px;}
+
+.toast{
+  position:fixed;top:calc(14px + env(safe-area-inset-top));left:50%;
+  transform:translateX(-50%) translateY(-20px);
+  background:var(--gold);color:#000;font-weight:800;font-size:14px;
+  padding:12px 20px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.4);
+  z-index:120;opacity:0;transition:all .3s cubic-bezier(.32,.72,0,1);pointer-events:none;
+  white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.banner{
+  background:linear-gradient(135deg,#1e2a1e,#1c1c1e);
+  border:1px solid rgba(48,209,88,.3);border-radius:14px;padding:12px 14px;
+  display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13px;color:var(--text);
+}
+.banner button{flex-shrink:0;background:var(--accent);color:#000;border:none;border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer;}
+.banner .x{background:none;color:var(--muted);border:none;font-size:16px;padding:0 4px;cursor:pointer;}
+
+.progress-wrap{margin-top:10px;}
+.progress-track{
+  width:100%;height:8px;background:#000;border-radius:6px;overflow:hidden;border:1px solid var(--border);
+}
+.progress-fill{
+  height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent2),var(--accent));
+  transition:width .4s cubic-bezier(.32,.72,0,1);
+}
+.progress-fill.done{background:linear-gradient(90deg,var(--accent),var(--gold));}
+.progress-label{font-size:11px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between;}
+.goal-edit-btn{background:none;border:none;color:var(--accent2);font-size:11.5px;font-weight:700;cursor:pointer;padding:0;margin-top:8px;}
+
+.iconbtn{background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:8px 10px;font-size:14px;cursor:pointer;}
+.top-actions{display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;}
+.info-line{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5;opacity:.8;}
+</style>
+</head>
+<body>
+
+<div class="page">
+<div class="app">
+
+  <!-- ================= DASHBOARD ================= -->
+  <div class="screen active" id="screen-dashboard">
+    <h1>💪 Трекер силовых</h1>
+    <div class="sub">Прогресс по базе, вариациям и подсобке</div>
+
+    <div id="backupBanner"></div>
+
+    <div class="grid2">
+      <div class="stat-card"><span class="ico">🏋️</span><div class="lbl">Лучший жим</div><div class="big" id="db-bench-val">—</div><div class="sub2" id="db-bench-sub"></div><div id="db-bench-progress"></div></div>
+      <div class="stat-card"><span class="ico">🦵</span><div class="lbl">Лучший присед</div><div class="big" id="db-squat-val">—</div><div class="sub2" id="db-squat-sub"></div><div id="db-squat-progress"></div></div>
+      <div class="stat-card"><span class="ico">🏆</span><div class="lbl">Лучшая тяга</div><div class="big" id="db-deadlift-val">—</div><div class="sub2" id="db-deadlift-sub"></div><div id="db-deadlift-progress"></div></div>
+      <div class="stat-card total"><span class="ico">⚡</span><div class="lbl">Сумма по 1ПМ (формула Эпли)</div><div class="big" id="db-total-val">—</div></div>
+    </div>
+
+    <div class="top-actions">
+      <button class="iconbtn" id="btn-goals">🎯 Цели</button>
+      <button class="iconbtn" id="btn-export">📦 Экспорт</button>
+      <button class="iconbtn" id="btn-import">📥 Импорт</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+    </div>
+
+
+    <div class="card">
+      <h2 style="font-size:16px;">Последние записи</h2>
+      <div id="db-recent"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:16px;">⚖️ Соотношение лифтов</h2>
+      <div id="db-ratios"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="font-size:16px;margin:0;">🏅 Разряд (ЄСКУ, класика)</h2>
+        <button class="iconbtn" id="btn-profile" style="padding:6px 10px;font-size:12.5px;">⚙️ Профиль</button>
+      </div>
+      <div id="db-rank"></div>
+    </div>
+  </div>
+
+  <!-- ================= BASE (Жим/Присед/Тяга) ================= -->
+  <div class="screen" id="screen-base">
+    <h1>🏋️ База</h1>
+    <div class="sub">Только жим, присед и становая тяга</div>
+
+    <div class="seg" id="baseSeg">
+      <button data-ex="bench" class="active">Жим</button>
+      <button data-ex="squat">Присед</button>
+      <button data-ex="deadlift">Тяга</button>
+    </div>
+
+    <div class="row3" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="big" id="base-max">—</div><div class="lbl">Макс. вес</div></div>
+      <div class="stat-card"><div class="big" id="base-1rm">—</div><div class="lbl">1ПМ (Эпли)</div></div>
+      <div class="stat-card"><div class="big" id="base-count">—</div><div class="lbl">Записей</div></div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:15px;">📈 Прогресс (макс. вес за сессию)</h2>
+      <div class="chart-wrap" id="base-chart"></div>
+      <div id="base-goal-progress"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:15px;">История</h2>
+      <div id="base-list"></div>
+    </div>
+  </div>
+
+  <!-- ================= VARIATIONS (не база) ================= -->
+  <div class="screen" id="screen-variation">
+    <h1>🔄 Вариации</h1>
+    <div class="sub">Присед/жим с паузой, фронтальный присед, тяга сумо и т.д.</div>
+
+    <div class="filter-row" id="var-filters"></div>
+
+    <div class="card">
+      <div id="var-list"></div>
+    </div>
+  </div>
+
+  <!-- ================= ACCESSORY (подсобка) ================= -->
+  <div class="screen" id="screen-accessory">
+    <h1>🧩 Подсобка</h1>
+    <div class="sub">Любые упражнения по группам мышц</div>
+
+    <div class="filter-row" id="acc-filters"></div>
+
+    <div class="card">
+      <div id="acc-list"></div>
+    </div>
+  </div>
+
+  <!-- ================= HISTORY (всё вместе) ================= -->
+  <div class="screen" id="screen-history">
+    <h1>📅 История</h1>
+    <div class="sub">Поиск по всем записям</div>
+
+    <div class="searchbar">
+      <input type="text" id="hist-search" placeholder="Поиск: название, экипировка, комментарий...">
+    </div>
+    <div class="filter-row" id="hist-filters"></div>
+    <div class="row2" style="margin-bottom:12px;">
+      <div class="field" style="margin-bottom:0;"><label>С</label><input type="date" id="hist-from"></div>
+      <div class="field" style="margin-bottom:0;"><label>По</label><input type="date" id="hist-to"></div>
+    </div>
+
+    <div class="card">
+      <div id="hist-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom tab bar -->
+<div class="tabbar">
+  <button class="item active" data-screen="dashboard"><span class="ic">🏠</span>Главная</button>
+  <button class="item" data-screen="base"><span class="ic">🏋️</span>База</button>
+  <button class="item" data-screen="variation"><span class="ic">🔄</span>Вариации</button>
+  <button class="item" data-screen="accessory"><span class="ic">🧩</span>Подсобка</button>
+  <button class="item" data-screen="history"><span class="ic">📅</span>История</button>
+</div>
+</div>
+
+<button class="fab" id="fabAdd">+</button>
+
+<!-- Add entry sheet -->
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="addSheet">
+  <div class="sheet-handle"></div>
+  <h3 id="sheetTitle">Добавить запись</h3>
+  <div class="type-note" id="sheetNote"></div>
+
+  <form id="entryForm">
+
+    <div class="seg" id="typeSeg">
+      <button type="button" data-type="base" class="active">База</button>
+      <button type="button" data-type="variation">Вариация</button>
+      <button type="button" data-type="accessory">Подсобка</button>
+    </div>
+
+    <!-- BASE fields -->
+    <div id="fields-base" class="field-group">
+      <div class="field">
+        <label>Упражнение</label>
+        <select id="f-base-exercise">
+          <option value="bench">Жим лёжа</option>
+          <option value="squat">Присед</option>
+          <option value="deadlift">Становая тяга</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- VARIATION fields -->
+    <div id="fields-variation" class="field-group hidden">
+      <div class="field">
+        <label>На основе какого движения</label>
+        <select id="f-var-category">
+          <option value="bench">Жим</option>
+          <option value="squat">Присед</option>
+          <option value="deadlift">Тяга</option>
+          <option value="other">Другое</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Название вариации</label>
+        <input type="text" id="f-var-name" placeholder="напр. Присед с паузой, Фронтальный присед">
+      </div>
+    </div>
+
+    <!-- ACCESSORY fields -->
+    <div id="fields-accessory" class="field-group hidden">
+      <div class="field">
+        <label>Группа мышц</label>
+        <select id="f-acc-group">
+          <option>Грудь</option>
+          <option>Спина</option>
+          <option>Плечи</option>
+          <option>Бицепс</option>
+          <option>Трицепс</option>
+          <option>Ноги</option>
+          <option>Пресс</option>
+          <option>Другое</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Название упражнения</label>
+        <input type="text" id="f-acc-name" placeholder="напр. Французский жим">
+      </div>
+    </div>
+
+    <!-- Common fields -->
+    <div class="row3">
+      <div class="field"><label>Дата</label><input type="date" id="f-date" required></div>
+      <div class="field"><label>Вес, кг</label><input type="number" step="0.5" min="0.5" id="f-weight" placeholder="100" required></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Подходы</label><input type="number" min="1" id="f-sets" placeholder="4" required></div>
+      <div class="field"><label>Повторения</label><input type="number" min="1" id="f-reps" placeholder="10" required></div>
+    </div>
+
+    <div class="optional-toggle">
+      <input type="checkbox" id="f-more-toggle">
+      <label for="f-more-toggle">Добавить детали (RPE, пауза, экипировка, заметка)</label>
+    </div>
+    <div class="optional-fields" id="moreFields">
+      <div class="row2">
+        <div class="field"><label>RPE (1–10)</label><input type="number" min="1" max="10" step="0.5" id="f-rpe" placeholder="8"></div>
+        <div class="field"><label>Пауза, сек</label><input type="number" min="0" id="f-pause" placeholder="120"></div>
+      </div>
+      <div class="field"><label>Экипировка</label><input type="text" id="f-gear" placeholder="напр. пояс, бинты, манжеты"></div>
+      <div class="field"><label>Комментарий</label><textarea id="f-comment" placeholder="Как прошло, ощущения..."></textarea></div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+    <div style="height:8px;"></div>
+    <button type="button" class="btn btn-secondary" id="cancelAdd">Отмена</button>
+  </form>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Profile sheet -->
+<div class="overlay" id="profileOverlay"></div>
+<div class="sheet" id="profileSheet">
+  <div class="sheet-handle"></div>
+  <h3>⚙️ Профиль</h3>
+  <div class="type-note">Нужно для расчёта весовой категории и разряда по ЄСКУ</div>
+  <form id="profileForm">
+    <div class="field"><label>Вес тела, кг</label><input type="number" step="0.1" min="0.1" id="pf-bodyweight" placeholder="напр. 82"></div>
+    <div class="field">
+      <label>Пол</label>
+      <select id="pf-gender">
+        <option value="male">Мужской</option>
+        <option value="female">Женский</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+    <div style="height:8px;"></div>
+    <button type="button" class="btn btn-secondary" id="cancelProfile">Отмена</button>
+  </form>
+</div>
+
+<!-- Goals sheet -->
+<div class="overlay" id="goalsOverlay"></div>
+<div class="sheet" id="goalsSheet">
+  <div class="sheet-handle"></div>
+  <h3>🎯 Цели по базе</h3>
+  <div class="type-note">Оставь поле пустым, если цель по этому упражнению не нужна</div>
+  <form id="goalsForm">
+    <div class="field"><label>Жим лёжа, кг</label><input type="number" step="0.5" min="0" id="goal-bench" placeholder="напр. 120"></div>
+    <div class="field"><label>Присед, кг</label><input type="number" step="0.5" min="0" id="goal-squat" placeholder="напр. 150"></div>
+    <div class="field"><label>Становая тяга, кг</label><input type="number" step="0.5" min="0" id="goal-deadlift" placeholder="напр. 180"></div>
+    <button type="submit" class="btn btn-primary">Сохранить цели</button>
+    <div style="height:8px;"></div>
+    <button type="button" class="btn btn-secondary" id="cancelGoals">Отмена</button>
+  </form>
+</div>
+
+<script>
+/* ===================== STATE & STORAGE ===================== */
+const STORAGE_KEY = 'strengthTrackerV4';
+const BASE_EX = {
+  bench:    { label: 'Жим лёжа', short: 'Жим',    icon: '🏋️' },
+  squat:    { label: 'Присед',   short: 'Присед', icon: '🦵' },
+  deadlift: { label: 'Становая тяга', short: 'Тяга', icon: '🏆' }
+};
+const VAR_CATEGORY_LABEL = { bench:'Жим', squat:'Присед', deadlift:'Тяга', other:'Другое' };
+
+/* Украинские нормативы ЄСКУ (класичний пауерліфтинг, без екіпіровки), сумма триборства, кг.
+   Источник: Додаток 56 до Кваліфікаційних норм та вимог ЄСКУ (2023), ukrpowerlifting.com / powerlifting.dp.ua */
+const UA_STANDARDS = {
+  male: {
+    categories: [46,49,53,59,66,74,83,93,105,120,999],
+    ranks: [
+      { key:'МСМК', label:'МСМК', values:[null,null,472.5,527.5,602.5,652.5,700.0,740.0,777.5,820.0,867.5] },
+      { key:'МС',   label:'МС',   values:[null,null,420.0,470.0,520.0,570.0,615.0,655.0,690.0,725.0,772.5] },
+      { key:'КМС',  label:'КМС',  values:[312.5,335.0,365.0,407.5,450.0,495.0,537.5,582.5,605.0,632.5,672.5] },
+      { key:'I',    label:'I розряд',   values:[272.5,292.5,320.0,355.0,392.5,430.0,465.0,505.0,525.0,547.5,582.5] },
+      { key:'II',   label:'II розряд',  values:[245.0,265.0,290.0,325.0,357.5,390.0,422.5,460.0,475.0,497.5,530.0] },
+      { key:'III',  label:'III розряд', values:[222.5,240.0,260.0,292.5,325.0,355.0,382.5,410.0,430.0,455.0,472.5] }
+    ]
+  },
+  female: {
+    categories: [40,43,47,52,57,63,69,76,84,999],
+    ranks: [
+      { key:'МСМК', label:'МСМК', values:[null,290.0,317.5,350.0,380.0,410.0,432.5,457.5,480.0,520.0] },
+      { key:'МС',   label:'МС',   values:[null,260.0,285.0,315.0,340.0,365.0,385.0,405.0,425.0,460.0] },
+      { key:'КМС',  label:'КМС',  values:[205.0,225.0,247.5,272.5,295.0,317.5,335.0,352.5,370.0,400.0] },
+      { key:'I',    label:'I розряд',   values:[177.5,195.0,215.0,235.0,255.0,275.0,290.0,305.0,320.0,347.5] },
+      { key:'II',   label:'II розряд',  values:[160.0,175.0,192.5,212.5,232.5,250.0,265.0,280.0,292.5,317.5] },
+      { key:'III',  label:'III розряд', values:[145.0,160.0,175.0,192.5,210.0,227.5,240.0,252.5,265.0,287.5] }
+    ]
+  }
+};
+function findCategoryIndex(bw, categories){
+  for(let i=0;i<categories.length-1;i++){ if(bw<=categories[i]) return i; }
+  return categories.length-1;
+}
+function categoryLabel(categories, idx){
+  return idx===categories.length-1 ? categories[categories.length-2]+'+' : String(categories[idx]);
+}
+
+let state = { entries: [], lastBackupAt: null, goals: {}, profile: { bodyweight: null, gender: 'male' } };
+let currentScreen = 'dashboard';
+let currentBaseEx = 'bench';
+let bannerDismissed = false;
+let sheetType = 'base';
+let sheetLockedType = null; // если не null — тип зафиксирован (открыт с вкладки база/вариации/подсобки)
+
+function emptyState(){
+  return { entries: [], lastBackupAt: null, goals: {}, profile: { bodyweight: null, gender: 'male' } };
+}
+function isValidEntry(entry){
+  if(!entry || !['base','variation','accessory'].includes(entry.type)) return false;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(entry.date || '')) return false;
+  if(!Number.isFinite(Number(entry.weight)) || Number(entry.weight)<=0) return false;
+  if(!Number.isInteger(Number(entry.sets)) || Number(entry.sets)<1) return false;
+  if(!Number.isInteger(Number(entry.reps)) || Number(entry.reps)<1) return false;
+  if(entry.type==='base') return Boolean(BASE_EX[entry.exercise]);
+  if(entry.type==='variation') return typeof entry.varName==='string' && Boolean(VAR_CATEGORY_LABEL[entry.varCategory]);
+  return typeof entry.accName==='string' && typeof entry.accGroup==='string';
+}
+function normalizeState(data){
+  const next = emptyState();
+  if(!data || typeof data!=='object') return next;
+  next.entries = Array.isArray(data.entries) ? data.entries.filter(isValidEntry).map(entry=>({
+    ...entry,
+    weight:Number(entry.weight), sets:Number(entry.sets), reps:Number(entry.reps),
+    createdAt:Number.isFinite(Number(entry.createdAt)) ? Number(entry.createdAt) : 0,
+    rpe:Number.isFinite(Number(entry.rpe)) ? Number(entry.rpe) : null,
+    pause:Number.isFinite(Number(entry.pause)) ? Number(entry.pause) : null,
+    gear:typeof entry.gear==='string' ? entry.gear : null,
+    comment:typeof entry.comment==='string' ? entry.comment : null
+  })) : [];
+  next.goals = data.goals && typeof data.goals==='object' ? data.goals : {};
+  ['bench','squat','deadlift'].forEach(ex=>{
+    const goal = Number(next.goals[ex]);
+    next.goals[ex] = Number.isFinite(goal) && goal>0 ? goal : null;
+  });
+  const bw = Number(data.profile && data.profile.bodyweight);
+  next.profile = { bodyweight:Number.isFinite(bw) && bw>0 ? bw : null, gender:data.profile && data.profile.gender==='female' ? 'female' : 'male' };
+  next.lastBackupAt = typeof data.lastBackupAt==='string' ? data.lastBackupAt : null;
+  return next;
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state = raw ? normalizeState(JSON.parse(raw)) : emptyState();
+  }catch(e){
+    console.error('Ошибка загрузки', e);
+    state = emptyState();
+  }
+}
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    showToast('⚠️ Не удалось сохранить: ' + e.message);
+  }
+}
+
+/* ===================== 1RM ===================== */
+function epley(w,r){ return r<=1 ? w : w*(1+r/30); }
+
+/* ===================== HELPERS ===================== */
+function fmtDate(d){
+  const date = new Date(d+'T00:00:00');
+  return date.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function localDateISO(){
+  const now = new Date();
+  now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
+  return now.toISOString().slice(0,10);
+}
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+function prGroupKey(e){
+  if(e.type==='base') return 'base|'+e.exercise;
+  if(e.type==='variation') return 'variation|'+e.varCategory+'|'+String(e.varName).toLowerCase();
+  return 'accessory|'+String(e.accGroup)+'|'+String(e.accName).toLowerCase();
+}
+function baseEntries(ex){ return state.entries.filter(e=>e.type==='base' && e.exercise===ex); }
+function bestWeightEntry(list){
+  if(list.length===0) return null;
+  return list.reduce((best,e)=> e.weight>best.weight ? e : best, list[0]);
+}
+function best1RM(list){
+  if(list.length===0) return 0;
+  return Math.max(...list.map(e=>epley(e.weight,e.reps)));
+}
+function recalculatePRs(){
+  const bestByGroup = new Map();
+  [...state.entries]
+    .sort((a,b)=>new Date(a.date)-new Date(b.date) || a.createdAt-b.createdAt)
+    .forEach(entry=>{
+      const key = prGroupKey(entry);
+      const previous = bestByGroup.get(key) || 0;
+      const result = epley(entry.weight, entry.reps);
+      entry.isPR = result>previous;
+      bestByGroup.set(key, Math.max(previous, result));
+    });
+}
+
+/* ===================== TOAST ===================== */
+let toastTimer=null;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2600);
+}
+
+/* ===================== NAVIGATION ===================== */
+function showScreen(name){
+  currentScreen = name;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.tabbar .item').forEach(b=>{
+    b.classList.toggle('active', b.dataset.screen===name);
+  });
+  if(name==='dashboard') renderDashboard();
+  if(name==='base') renderBaseScreen();
+  if(name==='variation') renderVariationScreen();
+  if(name==='accessory') renderAccessoryScreen();
+  if(name==='history') renderHistory();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.tabbar .item').forEach(btn=>{
+  btn.addEventListener('click', ()=> showScreen(btn.dataset.screen));
+});
+
+function renderCurrentScreen(){
+  if(currentScreen==='dashboard') renderDashboard();
+  if(currentScreen==='base') renderBaseScreen();
+  if(currentScreen==='variation') renderVariationScreen();
+  if(currentScreen==='accessory') renderAccessoryScreen();
+  if(currentScreen==='history') renderHistory();
+}
+
+function renderProgressBar(current, goal){
+  if(!goal || goal<=0) return '';
+  const pct = Math.min(100, Math.round((current/goal)*100));
+  const done = pct>=100;
+  return `
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill ${done?'done':''}" style="width:${pct}%;"></div></div>
+      <div class="progress-label"><span>${done?'🎯 Цель достигнута!':pct+'%'}</span><span>${current} / ${goal} кг</span></div>
+      <div class="progress-label" style="justify-content:flex-start;opacity:.7;">по оценке 1ПМ (Эпли)</div>
+    </div>`;
+}
+
+function renderRatios(){
+  const box = document.getElementById('db-ratios');
+  const bench = best1RM(baseEntries('bench'));
+  const squat = best1RM(baseEntries('squat'));
+  const dead = best1RM(baseEntries('deadlift'));
+  if(!bench || !squat || !dead){
+    box.innerHTML = '<div class="empty-state">Заполни все три базовых упражнения, чтобы увидеть соотношение</div>';
+    return;
+  }
+  function pair(label, a, b, lo, hi, aName, bName){
+    const ratio = a/b;
+    let verdict, color;
+    if(ratio<lo){ verdict = `${aName} немного отстаёт`; color='var(--gold)'; }
+    else if(ratio>hi){ verdict = `${bName} немного отстаёт`; color='var(--gold)'; }
+    else { verdict = 'В норме'; color='var(--accent)'; }
+    return `
+      <div class="entry-row">
+        <div>
+          <div class="entry-main">${label}: ${ratio.toFixed(2)}</div>
+          <div class="entry-sub" style="color:${color};">${verdict} (ориентир ${lo}–${hi})</div>
+        </div>
+      </div>`;
+  }
+  box.innerHTML =
+    pair('Присед / Жим', squat, bench, 1.2, 1.35, 'Присед', 'Жим') +
+    pair('Тяга / Присед', dead, squat, 1.1, 1.25, 'Тяга', 'Присед') +
+    pair('Тяга / Жим', dead, bench, 1.4, 1.65, 'Тяга', 'Жим') +
+    '<div class="info-line">Ориентиры условные (общепринятые прикидки для натурального атлета), не официальный норматив.</div>';
+}
+
+function renderRankCard(){
+  const box = document.getElementById('db-rank');
+  const bw = state.profile.bodyweight;
+  if(!bw){
+    box.innerHTML = '<div class="empty-state">Укажи вес тела в профиле, чтобы увидеть весовую категорию и разряд</div>';
+    return;
+  }
+  const bench = best1RM(baseEntries('bench'));
+  const squat = best1RM(baseEntries('squat'));
+  const dead = best1RM(baseEntries('deadlift'));
+  const total = bench+squat+dead;
+  if(total<=0){
+    box.innerHTML = '<div class="empty-state">Добавь записи по базе, чтобы рассчитать разряд</div>';
+    return;
+  }
+  const table = UA_STANDARDS[state.profile.gender];
+  const catIdx = findCategoryIndex(bw, table.categories);
+  const catLabel = categoryLabel(table.categories, catIdx);
+
+  let achieved = null, achievedIdx = -1;
+  for(let i=0;i<table.ranks.length;i++){
+    const v = table.ranks[i].values[catIdx];
+    if(v!==null && total>=v){ achieved = table.ranks[i]; achievedIdx = i; break; }
+  }
+  const nextIdx = achievedIdx>=0 ? achievedIdx-1 : table.ranks.length-1;
+  const next = nextIdx>=0 ? table.ranks[nextIdx] : null;
+  const nextVal = next ? next.values[catIdx] : null;
+
+  let html = `<div class="entry-sub" style="margin-bottom:8px;">Категория до ${catLabel} кг · Сумма (1ПМ): ${Math.round(total)} кг</div>`;
+  html += `<div class="entry-main" style="font-size:18px;margin-bottom:6px;">${achieved ? '🏅 '+achieved.label : 'Пока без разряда'}</div>`;
+  if(nextVal!==null){
+    html += renderProgressBar(Math.round(total), nextVal).replace('по оценке 1ПМ (Эпли)', 'до «'+next.label+'» ('+nextVal+' кг)');
+  } else if(achieved){
+    html += '<div class="entry-sub">Это максимальный разряд в таблице для твоей категории 🎉</div>';
+  }
+  html += '<div class="info-line">ЄСКУ 2023, класичний пауерліфтинг (без екіпіровки), сумма считается по оценке 1ПМ.</div>';
+  box.innerHTML = html;
+}
+
+/* ===================== DASHBOARD ===================== */
+function renderDashboard(){
+  let totalRM = 0;
+  ['bench','squat','deadlift'].forEach(ex=>{
+    const list = baseEntries(ex);
+    const b = bestWeightEntry(list);
+    document.getElementById('db-'+ex+'-val').textContent = b ? (b.weight+' × '+b.reps) : '—';
+    document.getElementById('db-'+ex+'-sub').textContent = b ? fmtDate(b.date) : 'Нет данных';
+    document.getElementById('db-'+ex+'-progress').innerHTML = list.length ? renderProgressBar(Math.round(best1RM(list)), state.goals[ex]) : '';
+    totalRM += list.length ? best1RM(list) : 0;
+  });
+  document.getElementById('db-total-val').textContent = totalRM>0 ? Math.round(totalRM)+' кг' : '—';
+
+  const recent = [...state.entries].sort((a,b)=> new Date(b.date)-new Date(a.date) || b.createdAt-a.createdAt).slice(0,6);
+  const box = document.getElementById('db-recent');
+  if(recent.length===0){
+    box.innerHTML = '<div class="empty-state">Пока нет записей — нажми «+», чтобы добавить первую</div>';
+  } else {
+    box.innerHTML = recent.map(e=>renderEntryRow(e)).join('');
+    attachDeleteHandlers(box);
+  }
+  renderRatios();
+  renderRankCard();
+  renderBackupBanner();
+}
+
+function renderBackupBanner(){
+  const box = document.getElementById('backupBanner');
+  if(bannerDismissed || state.entries.length===0){ box.innerHTML=''; return; }
+  const last = state.lastBackupAt ? new Date(state.lastBackupAt) : null;
+  const daysSince = last ? (Date.now()-last.getTime())/86400000 : Infinity;
+  if(daysSince < 7){ box.innerHTML=''; return; }
+  box.innerHTML = `
+    <div class="banner">
+      <div style="flex:1;">💾 Резервной копии давно не было. Данные хранятся только в этом браузере — сохрани JSON-файл на всякий случай.</div>
+      <button id="bannerExport">Экспорт</button>
+      <button class="x" id="bannerClose">✕</button>
+    </div>`;
+  document.getElementById('bannerExport').onclick = exportData;
+  document.getElementById('bannerClose').onclick = ()=>{ bannerDismissed=true; renderBackupBanner(); };
+}
+
+/* ===================== BASE SCREEN ===================== */
+document.querySelectorAll('#baseSeg button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#baseSeg button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentBaseEx = btn.dataset.ex;
+    renderBaseScreen();
+  });
+});
+function renderBaseScreen(){
+  const list = baseEntries(currentBaseEx);
+  const best = bestWeightEntry(list);
+  document.getElementById('base-max').textContent = best ? best.weight+' кг' : '—';
+  document.getElementById('base-1rm').textContent = list.length ? Math.round(best1RM(list))+' кг' : '—';
+  document.getElementById('base-count').textContent = list.length;
+  renderChart(list, document.getElementById('base-chart'));
+  document.getElementById('base-goal-progress').innerHTML = list.length ? renderProgressBar(Math.round(best1RM(list)), state.goals[currentBaseEx]) : '';
+
+  const box = document.getElementById('base-list');
+  const sorted = [...list].sort((a,b)=> new Date(b.date)-new Date(a.date) || b.createdAt-a.createdAt);
+  box.innerHTML = sorted.length ? sorted.map(e=>renderEntryRow(e)).join('') : '<div class="empty-state">Нет записей по этому упражнению</div>';
+  attachDeleteHandlers(box);
+}
+
+function renderChart(list, container){
+  const byDate = {};
+  list.forEach(e=>{ if(!byDate[e.date] || e.weight>byDate[e.date]) byDate[e.date]=e.weight; });
+  const points = Object.keys(byDate).sort((a,b)=>new Date(a)-new Date(b)).map(d=>({date:d,val:byDate[d]}));
+  if(points.length<2){
+    container.innerHTML = '<div class="chart-empty">Добавь записи хотя бы за 2 разные даты, чтобы увидеть график</div>';
+    return;
+  }
+
+  const W=300,H=140,PAD=10;
+  const minV = Math.min(...points.map(p=>p.val));
+  const maxV = Math.max(...points.map(p=>p.val));
+  const range = (maxV-minV)||1;
+  const stepX = points.length>1 ? (W-2*PAD)/(points.length-1) : 0;
+
+  const coords = points.map((p,i)=>{
+    const x = PAD + i*stepX;
+    const y = H-PAD - ((p.val-minV)/range)*(H-2*PAD);
+    return {x,y};
+  });
+  const pathD = coords.map((c,i)=> (i===0?'M':'L')+c.x.toFixed(1)+','+c.y.toFixed(1)).join(' ');
+  const areaD = pathD + ` L${coords[coords.length-1].x.toFixed(1)},${H-PAD} L${coords[0].x.toFixed(1)},${H-PAD} Z`;
+  const dots = coords.map((c,i)=>
+    `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${i===coords.length-1?4:2.5}" fill="${i===coords.length-1?'#30d158':'#0a84ff'}"/>`
+  ).join('');
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0a84ff" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#0a84ff" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaD}" fill="url(#grad)" stroke="none"/>
+      <path d="${pathD}" fill="none" stroke="#0a84ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    </svg>`;
+}
+
+/* ===================== VARIATION SCREEN ===================== */
+let varFilter = 'all';
+function renderVariationScreen(){
+  const box = document.getElementById('var-filters');
+  const opts = [{k:'all',l:'Все'},{k:'bench',l:'Жим'},{k:'squat',l:'Присед'},{k:'deadlift',l:'Тяга'},{k:'other',l:'Другое'}];
+  box.innerHTML = opts.map(o=>`<div class="chip ${varFilter===o.k?'active':''}" data-k="${o.k}">${o.l}</div>`).join('');
+  box.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ varFilter=c.dataset.k; renderVariationScreen(); });
+
+  let list = state.entries.filter(e=>e.type==='variation');
+  if(varFilter!=='all') list = list.filter(e=>e.varCategory===varFilter);
+  list.sort((a,b)=> new Date(b.date)-new Date(a.date) || b.createdAt-a.createdAt);
+
+  const listBox = document.getElementById('var-list');
+  listBox.innerHTML = list.length ? list.map(e=>renderEntryRow(e)).join('') : '<div class="empty-state">Пока нет вариаций — добавь через «+»</div>';
+  attachDeleteHandlers(listBox);
+}
+
+/* ===================== ACCESSORY SCREEN ===================== */
+let accFilter = 'all';
+function renderAccessoryScreen(){
+  const groups = ['Грудь','Спина','Плечи','Бицепс','Трицепс','Ноги','Пресс','Другое'];
+  const box = document.getElementById('acc-filters');
+  box.innerHTML = ['<div class="chip '+(accFilter==='all'?'active':'')+'" data-k="all">Все</div>']
+    .concat(groups.map(g=>`<div class="chip ${accFilter===g?'active':''}" data-k="${g}">${g}</div>`)).join('');
+  box.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ accFilter=c.dataset.k; renderAccessoryScreen(); });
+
+  let list = state.entries.filter(e=>e.type==='accessory');
+  if(accFilter!=='all') list = list.filter(e=>e.accGroup===accFilter);
+  list.sort((a,b)=> new Date(b.date)-new Date(a.date) || b.createdAt-a.createdAt);
+
+  const listBox = document.getElementById('acc-list');
+  listBox.innerHTML = list.length ? list.map(e=>renderEntryRow(e)).join('') : '<div class="empty-state">Пока нет подсобных упражнений — добавь через «+»</div>';
+  attachDeleteHandlers(listBox);
+}
+
+/* ===================== ENTRY ROW ===================== */
+function entryTitle(e){
+  if(e.type==='base') return `${e.weight} кг · ${e.sets}×${e.reps}`;
+  if(e.type==='variation') return `${escapeHtml(e.varName)} — ${e.weight} кг · ${e.sets}×${e.reps}`;
+  return `${escapeHtml(e.accName)} — ${e.weight} кг · ${e.sets}×${e.reps}`;
+}
+function entrySubParts(e){
+  const parts = [];
+  if(e.type==='base') parts.push(BASE_EX[e.exercise].short);
+  if(e.type==='variation') parts.push(VAR_CATEGORY_LABEL[e.varCategory]);
+  if(e.type==='accessory') parts.push(escapeHtml(e.accGroup));
+  parts.push(fmtDate(e.date));
+  if(e.rpe) parts.push('RPE '+e.rpe);
+  if(e.pause) parts.push(e.pause+'с отдых');
+  if(e.gear) parts.push(escapeHtml(e.gear));
+  return parts;
+}
+function renderEntryRow(e){
+  const isPR = e.isPR ? '<span class="pr-badge">PR</span>' : '';
+  const sub = entrySubParts(e).join(' · ');
+  return `
+    <div class="entry-row">
+      <div>
+        <div class="entry-main">${entryTitle(e)}${isPR}</div>
+        <div class="entry-sub">${sub}${e.comment ? '<br>💬 '+escapeHtml(e.comment) : ''}</div>
+      </div>
+      <button class="entry-del" data-id="${e.id}">✕</button>
+    </div>`;
+}
+function attachDeleteHandlers(container){
+  container.querySelectorAll('.entry-del').forEach(btn=>{
+    btn.onclick = ()=> deleteEntry(btn.dataset.id);
+  });
+}
+function deleteEntry(id){
+  state.entries = state.entries.filter(e=>e.id!==id);
+  recalculatePRs();
+  saveState();
+  renderCurrentScreen();
+}
+
+/* ===================== HISTORY SCREEN ===================== */
+let histFilterType = 'all';
+function renderHistoryFilters(){
+  const box = document.getElementById('hist-filters');
+  const opts = [{k:'all',l:'Все'},{k:'base',l:'База'},{k:'variation',l:'Вариации'},{k:'accessory',l:'Подсобка'}];
+  box.innerHTML = opts.map(o=>`<div class="chip ${histFilterType===o.k?'active':''}" data-k="${o.k}">${o.l}</div>`).join('');
+  box.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ histFilterType=c.dataset.k; renderHistory(); });
+}
+function renderHistory(){
+  renderHistoryFilters();
+  const search = document.getElementById('hist-search').value.trim().toLowerCase();
+  const from = document.getElementById('hist-from').value;
+  const to = document.getElementById('hist-to').value;
+
+  let list = [...state.entries];
+  if(histFilterType!=='all') list = list.filter(e=>e.type===histFilterType);
+  if(from) list = list.filter(e=>e.date>=from);
+  if(to) list = list.filter(e=>e.date<=to);
+  if(search){
+    list = list.filter(e=>{
+      const hay = [
+        e.type==='base' ? BASE_EX[e.exercise].label : '',
+        e.varName, e.accName, e.gear, e.comment
+      ].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(search);
+    });
+  }
+  list.sort((a,b)=> new Date(b.date)-new Date(a.date) || b.createdAt-a.createdAt);
+
+  const box = document.getElementById('hist-list');
+  box.innerHTML = list.length ? list.map(e=>renderEntryRow(e)).join('') : '<div class="empty-state">Ничего не найдено</div>';
+  attachDeleteHandlers(box);
+}
+document.getElementById('hist-search').addEventListener('input', renderHistory);
+document.getElementById('hist-from').addEventListener('change', renderHistory);
+document.getElementById('hist-to').addEventListener('change', renderHistory);
+
+/* ===================== ADD ENTRY SHEET ===================== */
+const overlay = document.getElementById('overlay');
+const sheet = document.getElementById('addSheet');
+
+function setSheetType(type){
+  sheetType = type;
+  document.querySelectorAll('#typeSeg button').forEach(b=>b.classList.toggle('active', b.dataset.type===type));
+  document.getElementById('fields-base').classList.toggle('hidden', type!=='base');
+  document.getElementById('fields-variation').classList.toggle('hidden', type!=='variation');
+  document.getElementById('fields-accessory').classList.toggle('hidden', type!=='accessory');
+}
+document.querySelectorAll('#typeSeg button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{ if(!sheetLockedType) setSheetType(btn.dataset.type); });
+});
+
+function openSheet(){
+  document.getElementById('f-date').value = localDateISO();
+
+  if(currentScreen==='base'){
+    sheetLockedType = 'base';
+    document.getElementById('f-base-exercise').value = currentBaseEx;
+  } else if(currentScreen==='variation'){
+    sheetLockedType = 'variation';
+  } else if(currentScreen==='accessory'){
+    sheetLockedType = 'accessory';
+  } else {
+    sheetLockedType = null;
+  }
+
+  const typeSegBox = document.getElementById('typeSeg');
+  const noteBox = document.getElementById('sheetNote');
+  if(sheetLockedType){
+    typeSegBox.classList.add('hidden');
+    setSheetType(sheetLockedType);
+    const notes = { base:'Добавление в раздел «База» (жим/присед/тяга)', variation:'Добавление в раздел «Вариации»', accessory:'Добавление в раздел «Подсобка»' };
+    noteBox.textContent = notes[sheetLockedType];
+  } else {
+    typeSegBox.classList.remove('hidden');
+    setSheetType('base');
+    noteBox.textContent = 'Выбери тип записи';
+  }
+
+  overlay.classList.add('open');
+  sheet.classList.add('open');
+}
+function closeSheet(){
+  overlay.classList.remove('open');
+  sheet.classList.remove('open');
+  document.getElementById('entryForm').reset();
+  document.getElementById('moreFields').classList.remove('open');
+  sheetLockedType = null;
+}
+document.getElementById('fabAdd').addEventListener('click', openSheet);
+document.getElementById('cancelAdd').addEventListener('click', closeSheet);
+overlay.addEventListener('click', closeSheet);
+document.getElementById('f-more-toggle').addEventListener('change', e=>{
+  document.getElementById('moreFields').classList.toggle('open', e.target.checked);
+});
+
+document.getElementById('entryForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const date = document.getElementById('f-date').value;
+  const weight = parseFloat(document.getElementById('f-weight').value);
+  const sets = parseInt(document.getElementById('f-sets').value,10);
+  const reps = parseInt(document.getElementById('f-reps').value,10);
+  if(!date || isNaN(weight) || weight<=0 || isNaN(sets) || sets<1 || isNaN(reps) || reps<1){
+    showToast('⚠️ Заполни дату, вес, подходы и повторения');
+    return;
+  }
+
+  let base = { date, weight, sets, reps, type: sheetType, createdAt: Date.now(), isPR:false };
+
+  if(sheetType==='base'){
+    base.exercise = document.getElementById('f-base-exercise').value;
+  } else if(sheetType==='variation'){
+    const name = document.getElementById('f-var-name').value.trim();
+    if(!name){ showToast('⚠️ Укажи название вариации'); return; }
+    base.varCategory = document.getElementById('f-var-category').value;
+    base.varName = name;
+  } else {
+    const name = document.getElementById('f-acc-name').value.trim();
+    if(!name){ showToast('⚠️ Укажи название упражнения'); return; }
+    base.accGroup = document.getElementById('f-acc-group').value;
+    base.accName = name;
+  }
+
+  const showMore = document.getElementById('f-more-toggle').checked;
+  base.rpe = showMore && document.getElementById('f-rpe').value ? parseFloat(document.getElementById('f-rpe').value) : null;
+  base.pause = showMore && document.getElementById('f-pause').value ? parseInt(document.getElementById('f-pause').value,10) : null;
+  base.gear = showMore ? (document.getElementById('f-gear').value.trim() || null) : null;
+  base.comment = showMore ? (document.getElementById('f-comment').value.trim() || null) : null;
+
+  base.id = Date.now().toString()+Math.random().toString(36).slice(2,7);
+
+  const key = prGroupKey(base);
+  const prevBest = Math.max(0, ...state.entries.filter(en=>prGroupKey(en)===key).map(en=>epley(en.weight,en.reps)));
+  const newRM = epley(weight,reps);
+  base.isPR = newRM > prevBest;
+
+  state.entries.push(base);
+  recalculatePRs();
+  saveState();
+  closeSheet();
+  renderCurrentScreen();
+
+  showToast(base.isPR ? '🎉 Новый PR!' : '✓ Запись сохранена');
+});
+
+/* ===================== PROFILE ===================== */
+const profileOverlay = document.getElementById('profileOverlay');
+const profileSheet = document.getElementById('profileSheet');
+function openProfileSheet(){
+  document.getElementById('pf-bodyweight').value = state.profile.bodyweight || '';
+  document.getElementById('pf-gender').value = state.profile.gender || 'male';
+  profileOverlay.classList.add('open');
+  profileSheet.classList.add('open');
+}
+function closeProfileSheet(){
+  profileOverlay.classList.remove('open');
+  profileSheet.classList.remove('open');
+}
+document.getElementById('btn-profile').addEventListener('click', openProfileSheet);
+document.getElementById('cancelProfile').addEventListener('click', closeProfileSheet);
+profileOverlay.addEventListener('click', closeProfileSheet);
+document.getElementById('profileForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const bodyweight = parseFloat(document.getElementById('pf-bodyweight').value);
+  state.profile = {
+    bodyweight: Number.isFinite(bodyweight) && bodyweight>0 ? bodyweight : null,
+    gender: document.getElementById('pf-gender').value==='female' ? 'female' : 'male'
+  };
+  saveState();
+  closeProfileSheet();
+  renderCurrentScreen();
+  showToast('⚙️ Профиль сохранён');
+});
+
+/* ===================== GOALS ===================== */
+const goalsOverlay = document.getElementById('goalsOverlay');
+const goalsSheet = document.getElementById('goalsSheet');
+function openGoalsSheet(){
+  document.getElementById('goal-bench').value = state.goals.bench || '';
+  document.getElementById('goal-squat').value = state.goals.squat || '';
+  document.getElementById('goal-deadlift').value = state.goals.deadlift || '';
+  goalsOverlay.classList.add('open');
+  goalsSheet.classList.add('open');
+}
+function closeGoalsSheet(){
+  goalsOverlay.classList.remove('open');
+  goalsSheet.classList.remove('open');
+}
+document.getElementById('btn-goals').addEventListener('click', openGoalsSheet);
+document.getElementById('cancelGoals').addEventListener('click', closeGoalsSheet);
+goalsOverlay.addEventListener('click', closeGoalsSheet);
+document.getElementById('goalsForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  ['bench','squat','deadlift'].forEach(ex=>{
+    const val = parseFloat(document.getElementById('goal-'+ex).value);
+    state.goals[ex] = (!isNaN(val) && val>0) ? val : null;
+  });
+  saveState();
+  closeGoalsSheet();
+  renderCurrentScreen();
+  showToast('🎯 Цели сохранены');
+});
+
+/* ===================== EXPORT / IMPORT ===================== */
+function exportData(){
+  const payload = { ...state, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'strength-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  state.lastBackupAt = new Date().toISOString();
+  saveState();
+  bannerDismissed = false;
+  renderBackupBanner();
+  showToast('📦 Файл сохранён');
+}
+document.getElementById('btn-export').addEventListener('click', exportData);
+document.getElementById('btn-import').addEventListener('click', ()=> document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const data = JSON.parse(evt.target.result);
+      const incoming = Array.isArray(data) ? data : data.entries;
+      if(!Array.isArray(incoming)) throw new Error('Неверный формат файла');
+      const importedState = normalizeState(Array.isArray(data) ? { entries:data } : data);
+      if(incoming.length && importedState.entries.length===0) throw new Error('В файле нет корректных записей');
+      const replace = confirm('Заменить текущие данные импортированными?\nОК — заменить, Отмена — объединить с текущими.');
+      if(replace){
+        state = importedState;
+      } else {
+        const existingIds = new Set(state.entries.map(x=>x.id));
+        importedState.entries.forEach(x=>{ if(!existingIds.has(x.id)) state.entries.push(x); });
+      }
+      recalculatePRs();
+      saveState();
+      renderCurrentScreen();
+      showToast('✓ Импорт завершён');
+    }catch(err){
+      showToast('⚠️ Ошибка импорта: '+err.message);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ===================== INIT ===================== */
+
+/* Фикс "прыгающего" дока на iOS: пересчитываем реальную высоту viewport
+   вручную, т.к. 100dvh не всегда корректно возвращается после скрытия клавиатуры */
+function setAppHeight(){
+  const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  document.documentElement.style.setProperty('--app-height', h + 'px');
+}
+setAppHeight();
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', ()=>setTimeout(setAppHeight, 150));
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', setAppHeight);
+}
+document.addEventListener('focusout', (e)=>{
+  if(e.target && e.target.matches && e.target.matches('input,textarea,select')){
+    setTimeout(setAppHeight, 50);
+    setTimeout(setAppHeight, 300);
+    setTimeout(()=>window.scrollTo(0,0), 60);
+  }
+});
+
+loadState();
+recalculatePRs();
+showScreen('dashboard');
+</script>
+</body>
+</html>
